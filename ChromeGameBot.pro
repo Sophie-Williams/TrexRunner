@@ -38,13 +38,13 @@ CONFIG += c++11
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    boundselector.cpp \
-    game.cpp
+    game.cpp \
+    bound_selector.cpp
 
 HEADERS += \
         mainwindow.h \
-    boundselector.h \
-    game.h
+    game.h \
+    bound_selector.h
 
 FORMS += \
         mainwindow.ui \

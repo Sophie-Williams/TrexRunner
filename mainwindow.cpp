@@ -121,7 +121,7 @@ void MainWindow::SendUp(){
     ip.ki.wVk = 0x26; // virtual-key code for the "a" key
     ip.ki.dwFlags = 0; // 0 for key press
     SendInput(1, &ip, sizeof(INPUT));
-    Sleep(5);
+    //Sleep(5);
     // Release the key
     ip.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
     SendInput(1, &ip, sizeof(INPUT));

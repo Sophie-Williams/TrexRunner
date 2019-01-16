@@ -9,7 +9,7 @@
 #include <iostream>
 #include <QPixmap>
 #include <QTimer>
-#include "boundselector.h"
+#include "bound_selector.h"
 #include <QTextEdit>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>

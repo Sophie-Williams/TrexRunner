@@ -24,10 +24,10 @@ struct DinoPos{
     bool ok;
 };
 
-struct CollisionLine{
+/*struct CollisionLine{
     cv::Point top;
     cv::Point bottom;
-};
+};*/
 
 class DinoGame : public QObject{
     Q_OBJECT
@@ -40,14 +40,19 @@ private:
     bool game_initialized = false;
     bool is_night = false;
     bool ground_found = false;
+    int ground_y = -1;
+    bool dino_found = false;
     void ProcessFrame(cv::Mat &I, cv::Mat org_frame);
     cv::Mat dino_temp;
-    DinoPos dinoPos;
-    DinoPos findDino(cv::Mat& I, int ground_top);
-    bool dino_found = false;
-    CollisionLine collisionLine;
-    bool checkCollision(CollisionLine col, cv::Mat& I);
-
+    cv::Mat thresh_mat;
+    cv::Rect dino_pos;
+    cv::Rect first_dino_pos;
+    cv::Rect collision_area;
+    cv::Rect findDinoItr(cv::Mat& I, int ground_top);
+    cv::Rect findDinoTM( cv::Mat& I, cv::Mat templ );
+    bool detectCollision(cv::Mat &I, cv::Rect roi);
+    bool collided = false;
+    int findGround(cv::Mat& I);
 
 
 signals:

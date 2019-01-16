@@ -1,4 +1,4 @@
-#include "boundselector.h"
+#include "bound_selector.h"
 #include "ui_boundselector.h"
 
 BoundSelector::BoundSelector(QWidget *parent) :

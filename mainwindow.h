@@ -9,7 +9,7 @@
 #include <iostream>
 #include <QPixmap>
 #include <QTimer>
-#include "bound_selector.h"
+#include "area_selector.h"
 #include <QTextEdit>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -38,6 +38,7 @@ public:
     QTextEdit *txtInfo;
     QTimer *timer;
     QTimer *fps_timer;
+    QTimer *key_release_timer;
     QRect bounds;
     DinoGame *game;
 
@@ -45,7 +46,8 @@ public slots:
     void Tick();
     void GetFPS();
     void Start(QRect rect);
-    void Update(QPoint dino, QPoint blocks[], bool is_night, cv::Mat frame, bool collided);
+    void Update(QPoint dino, QPoint blocks[], bool is_night, cv::Mat frame, CollisionResult coll_data, bool on_ground);
+    void ReleaseKey();
 
 private:
     Ui::MainWindow *ui;
@@ -55,8 +57,14 @@ private:
     QPixmap mat_to_qimage_cpy(cv::Mat const &mat, QImage::Format format);
     QPixmap pix;
     int current_fps;
+    bool collided = false;
     void ShowImage(QPixmap pix, QLabel *canvas);
-    void SendUp();
+    void SendKey(WORD key);
+    WORD last_key;
+    bool on_down_press = false;
+    bool on_up_press = false;
+    WORD UP_KEY = 0x26;
+    WORD DOWN_KEY = 0x28;
 };
 
 #endif // MAINWINDOW_H

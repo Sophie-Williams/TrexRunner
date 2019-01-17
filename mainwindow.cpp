@@ -28,23 +28,24 @@ void MainWindow::Start(QRect rect){
     bounds = rect;
     timer = new QTimer();
     fps_timer = new QTimer();
+    key_release_timer = new QTimer();
     connect(timer, SIGNAL(timeout()), this, SLOT(Tick()));
     connect(fps_timer, SIGNAL(timeout()), this, SLOT(GetFPS()));
+    connect(key_release_timer, SIGNAL(timeout()), this, SLOT(ReleaseKey()));
     timer->setInterval(16);
     fps_timer->setInterval(1000);
+    key_release_timer->setInterval(200);
     timer->start();
     fps_timer->start();
 }
 
 void MainWindow::GetFPS(){
-    //lblFps->setText("FPS: " + QString::number(frame_count));
     current_fps = frame_count;
-    std::cout << "FPS: "<< QString::number(frame_count).toStdString() << std::endl;
+    //std::cout << "FPS: "<< QString::number(frame_count).toStdString() << std::endl;
     frame_count = 0;
 }
 
 void MainWindow::Tick(){
-    //QRect crop_rect(0, 0, 100, 100);
     frame_count++;
     pix = qApp->screens().at(0)->grabWindow(
         QDesktopWidget().winId(),
@@ -59,8 +60,6 @@ void MainWindow::Tick(){
     ShowImage(mat_to_qimage_cpy(display_img, QImage::Format_RGB888), imgCaptured);
     game->LoadFrame(mat);
 
-    /*pix = pix.scaled(imgView->size(),Qt::KeepAspectRatio);
-    imgView->setPixmap(pix);*/
 }
 
 cv::Mat MainWindow::qimage_to_mat_ref(QImage const &img, int format)
@@ -85,19 +84,37 @@ QPixmap MainWindow::mat_to_qimage_cpy(cv::Mat const &mat, QImage::Format format)
 
 
 
-void MainWindow::Update(QPoint dino, QPoint blocks[], bool is_night, cv::Mat frame, bool collided){
+void MainWindow::Update(QPoint dino, QPoint blocks[], bool is_night, cv::Mat frame, CollisionResult coll_data, bool on_ground){
     //imshow("deneme", frame);
     QString infoText = "";
     infoText += "FPS: " + QString::number(current_fps) + "\n";
     infoText += "Day/Night: ";
     infoText += (is_night) ? "Night" : "Day";
     infoText += "\n";
-    txtInfo ->setText(infoText);
+    infoText += "onGround: ";
+    infoText += (on_ground) ? "true" : "false";
+    infoText += "\n";
+    infoText += (coll_data.safe) ? "Safe: true\n" : "Safe: false\n";
     ShowImage(mat_to_qimage_cpy(frame, QImage::Format_RGB888 /*QImage::Format_Grayscale8*/), imgInfo);
 
-    if(collided){
-        SendUp();
+
+    if(!on_down_press && on_ground && (coll_data.top_collision && !coll_data.bottom_collision)){
+        on_down_press = true;
+        on_up_press = false;
+        SendKey(DOWN_KEY);
+    }else if(!on_up_press && on_ground && (coll_data.top_collision || coll_data.bottom_collision)){
+        on_up_press = true;
+        on_down_press = false;
+        SendKey(UP_KEY);
     }
+    else if(coll_data.safe && !on_ground && !on_down_press){
+        on_down_press = true;
+        on_up_press = false;
+        SendKey(DOWN_KEY);
+    }
+
+    txtInfo ->setText(infoText);
+
 
 }
 
@@ -108,24 +125,45 @@ void MainWindow::ShowImage(QPixmap pix, QLabel *canvas){
 
 
 #define WINVER 0x0500
-void MainWindow::SendUp(){
+void MainWindow::SendKey(WORD key){
+    //key_release_timer->stop();
+    ReleaseKey();
+
     INPUT ip;
 
-    // Set up a generic keyboard event.
     ip.type = INPUT_KEYBOARD;
-    ip.ki.wScan = 0; // hardware scan code for key
+    ip.ki.wScan = 0;
     ip.ki.time = 0;
     ip.ki.dwExtraInfo = 0;
 
-    // Press the key
-    ip.ki.wVk = 0x26; // virtual-key code for the "a" key
-    ip.ki.dwFlags = 0; // 0 for key press
+    ip.ki.wVk = key;
+    ip.ki.dwFlags = 0;
     SendInput(1, &ip, sizeof(INPUT));
-    //Sleep(5);
-    // Release the key
-    ip.ki.dwFlags = KEYEVENTF_KEYUP; // KEYEVENTF_KEYUP for key release
+    last_key = key;
+
+    int key_interval = (key == DOWN_KEY) ? 1000 : 100;
+
+    key_release_timer->setInterval(key_interval);
+    key_release_timer->start();
+
+}
+
+
+void MainWindow::ReleaseKey(){
+    INPUT ip;
+
+    ip.type = INPUT_KEYBOARD;
+    ip.ki.wScan = 0;
+    ip.ki.time = 0;
+    ip.ki.dwExtraInfo = 0;
+
+    ip.ki.wVk = last_key;
+    ip.ki.dwFlags = KEYEVENTF_KEYUP;
     SendInput(1, &ip, sizeof(INPUT));
 
+    key_release_timer->stop();
+
+    std::cout << "key release!\n";
 }
 
 
@@ -137,6 +175,7 @@ MainWindow::~MainWindow()
     delete txtInfo;
     delete timer;
     delete fps_timer;
+    delete key_release_timer;
     delete game;
     delete ui;
 }

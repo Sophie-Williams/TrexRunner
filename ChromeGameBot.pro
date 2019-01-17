@@ -39,16 +39,16 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
     game.cpp \
-    bound_selector.cpp
+    area_selector.cpp
 
 HEADERS += \
         mainwindow.h \
     game.h \
-    bound_selector.h
+    area_selector.h
 
 FORMS += \
         mainwindow.ui \
-    boundselector.ui
+    area_selector.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

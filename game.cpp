@@ -24,6 +24,56 @@ void DinoGame::ProcessFrame(cv::Mat& I, cv::Mat org_frame){
 
     line( result_frame, cv::Point(0, ground_y), cv::Point(I.cols, ground_y), cv::Scalar(255,255,0), 1, cv::LINE_AA);
 
+
+
+    /* find contours */
+
+    cv::Mat basic_frame;
+
+    int horizontalsize = I.cols / 5;
+    int kernel_size = 1;
+    cv::Mat horizontalStructure = getStructuringElement(cv::MORPH_ELLIPSE,
+                                                        cv::Size( 2*kernel_size + 1, 2*kernel_size+1 ),
+                                                        cv::Point( kernel_size, kernel_size ) );
+
+    erode(thresh_mat, thresh_mat, horizontalStructure);
+
+    horizontalStructure = getStructuringElement(cv::MORPH_RECT,
+                                                        cv::Size( 6*kernel_size + 1, 6*kernel_size+1 ),
+                                                        cv::Point( kernel_size*3, kernel_size*3 ) );
+
+    dilate(thresh_mat, thresh_mat, horizontalStructure);
+    //blur( thresh_mat, thresh_mat, cv::Size( kernel_size, kernel_size ), cv::Point(-1,-1) );
+
+
+    //Find the contours. Use the contourOutput Mat so the original image doesn't get overwritten
+    std::vector<std::vector<cv::Point> > contours;
+    cv::Mat contourOutput = thresh_mat.clone();
+    cv::findContours( contourOutput, contours, CV_RETR_LIST, CV_CHAIN_APPROX_NONE );
+
+    //Draw the contours
+    cv::Mat contourImage(thresh_mat.size(), CV_8UC3, cv::Scalar(0,0,0));
+    cv::Scalar colors[3];
+    colors[0] = cv::Scalar(255, 0, 0);
+    colors[1] = cv::Scalar(0, 255, 0);
+    colors[2] = cv::Scalar(0, 0, 255);
+    for (size_t idx = 0; idx < contours.size(); idx++) {
+        cv::drawContours(contourImage, contours, idx, colors[idx % 3]);
+        cv::Rect bounding_rect = cv::boundingRect(contours[idx]);
+        cv::rectangle( contourImage, bounding_rect.tl(), bounding_rect.br(), colors[idx % 3], 2, 8, 0 );
+    }
+
+    cv::imshow("contours", contourImage);
+
+
+
+
+    /* end */
+
+
+
+
+
     if(dino_found){
         dino_pos = findDinoTM(I, dino_temp);
     }else{
@@ -31,6 +81,8 @@ void DinoGame::ProcessFrame(cv::Mat& I, cv::Mat org_frame){
         dino_pos = first_dino_pos;
         dino_found = true;
     }
+
+
 
     rectangle(result_frame,
               first_dino_pos.tl(),

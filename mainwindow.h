@@ -16,6 +16,7 @@
 #include "opencv2/imgproc/imgproc.hpp"
 #include <QKeyEvent>
 #include <QEvent>
+#include "controller.h"
 
 #include "game.h"
 
@@ -65,6 +66,7 @@ private:
     bool on_up_press = false;
     WORD UP_KEY = 0x26;
     WORD DOWN_KEY = 0x28;
+    GameController controller;
 };
 
 #endif // MAINWINDOW_H

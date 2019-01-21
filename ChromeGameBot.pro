@@ -39,12 +39,14 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
     game.cpp \
-    area_selector.cpp
+    area_selector.cpp \
+    controller.cpp
 
 HEADERS += \
         mainwindow.h \
     game.h \
-    area_selector.h
+    area_selector.h \
+    controller.h
 
 FORMS += \
         mainwindow.ui \

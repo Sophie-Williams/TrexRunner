@@ -98,22 +98,21 @@ void MainWindow::Update(QPoint dino, QPoint blocks[], bool is_night, cv::Mat fra
     ShowImage(mat_to_qimage_cpy(frame, QImage::Format_RGB888 /*QImage::Format_Grayscale8*/), imgInfo);
 
 
-    if(!on_down_press && on_ground && (coll_data.top_collision && !coll_data.bottom_collision)){
-        on_down_press = true;
-        on_up_press = false;
-        SendKey(DOWN_KEY);
-    }else if(!on_up_press && on_ground && (coll_data.top_collision || coll_data.bottom_collision)){
-        on_up_press = true;
-        on_down_press = false;
-        SendKey(UP_KEY);
-    }
-    else if(coll_data.safe && !on_ground && !on_down_press){
-        on_down_press = true;
-        on_up_press = false;
-        SendKey(DOWN_KEY);
+    if( (coll_data.top_collision && !coll_data.bottom_collision)){
+        /*on_down_press = true;
+        on_up_press = false;*/
+        //SendKey(DOWN_KEY);
+        controller.Duck(500);
+    }else if( (coll_data.top_collision || coll_data.bottom_collision)){
+        /*on_up_press = true;
+        on_down_press = false;*/
+        //SendKey(UP_KEY);
+        controller.Jump();
+    }else if(coll_data.safe){
+        //controller.Duck(-1);
     }
 
-    txtInfo ->setText(infoText);
+    txtInfo->setText(infoText);
 
 
 }
@@ -124,7 +123,7 @@ void MainWindow::ShowImage(QPixmap pix, QLabel *canvas){
 }
 
 
-#define WINVER 0x0500
+//#define WINVER 0x0500
 void MainWindow::SendKey(WORD key){
     //key_release_timer->stop();
     ReleaseKey();

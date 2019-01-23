@@ -40,13 +40,15 @@ SOURCES += \
         mainwindow.cpp \
     game.cpp \
     area_selector.cpp \
-    controller.cpp
+    controller.cpp \
+    windowhandle.cpp
 
 HEADERS += \
         mainwindow.h \
     game.h \
     area_selector.h \
-    controller.h
+    controller.h \
+    windowhandle.h
 
 FORMS += \
         mainwindow.ui \

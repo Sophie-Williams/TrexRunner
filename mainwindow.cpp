@@ -8,8 +8,9 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    this->setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
+    //this->setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
     game = new DinoGame();
+    connect(game, SIGNAL(GameOver()), this, SLOT(Restart()));
     qRegisterMetaType<cv::Mat>();
     connect(game, &DinoGame::ProcessFinished, this, &MainWindow::Update);
     imgCaptured = this->ui->imgCapture;
@@ -31,12 +32,17 @@ void MainWindow::Start(QRect rect){
     key_release_timer = new QTimer();
     connect(timer, SIGNAL(timeout()), this, SLOT(Tick()));
     connect(fps_timer, SIGNAL(timeout()), this, SLOT(GetFPS()));
-    connect(key_release_timer, SIGNAL(timeout()), this, SLOT(ReleaseKey()));
+    //connect(key_release_timer, SIGNAL(timeout()), this, SLOT(ReleaseKey()));
     timer->setInterval(16);
     fps_timer->setInterval(1000);
     key_release_timer->setInterval(200);
     timer->start();
     fps_timer->start();
+}
+
+void MainWindow::Restart(){
+    txtInfo->setText("Game Over!");
+    controller.Jump();
 }
 
 void MainWindow::GetFPS(){
@@ -84,7 +90,7 @@ QPixmap MainWindow::mat_to_qimage_cpy(cv::Mat const &mat, QImage::Format format)
 
 
 
-void MainWindow::Update(QPoint dino, QPoint blocks[], bool is_night, cv::Mat frame, CollisionResult coll_data, bool on_ground){
+void MainWindow::Update(QPoint dino, QPoint blocks[], bool is_night, cv::Mat frame, CollisionResult coll_data, bool on_ground, long pix_ms){
     //imshow("deneme", frame);
     QString infoText = "";
     infoText += "FPS: " + QString::number(current_fps) + "\n";
@@ -95,6 +101,7 @@ void MainWindow::Update(QPoint dino, QPoint blocks[], bool is_night, cv::Mat fra
     infoText += (on_ground) ? "true" : "false";
     infoText += "\n";
     infoText += (coll_data.safe) ? "Safe: true\n" : "Safe: false\n";
+    infoText += QString::number(pix_ms) + "  pixel / s\n";
     ShowImage(mat_to_qimage_cpy(frame, QImage::Format_RGB888 /*QImage::Format_Grayscale8*/), imgInfo);
 
 
@@ -102,7 +109,7 @@ void MainWindow::Update(QPoint dino, QPoint blocks[], bool is_night, cv::Mat fra
         /*on_down_press = true;
         on_up_press = false;*/
         //SendKey(DOWN_KEY);
-        controller.Duck(500);
+        controller.Duck(100);
     }else if( (coll_data.top_collision || coll_data.bottom_collision)){
         /*on_up_press = true;
         on_down_press = false;*/
@@ -110,6 +117,7 @@ void MainWindow::Update(QPoint dino, QPoint blocks[], bool is_night, cv::Mat fra
         controller.Jump();
     }else if(coll_data.safe){
         //controller.Duck(-1);
+        controller.StopKeyPress();
     }
 
     txtInfo->setText(infoText);
@@ -120,49 +128,6 @@ void MainWindow::Update(QPoint dino, QPoint blocks[], bool is_night, cv::Mat fra
 void MainWindow::ShowImage(QPixmap pix, QLabel *canvas){
     pix = pix.scaled(canvas->size(),Qt::KeepAspectRatio);
     canvas->setPixmap(pix);
-}
-
-
-//#define WINVER 0x0500
-void MainWindow::SendKey(WORD key){
-    //key_release_timer->stop();
-    ReleaseKey();
-
-    INPUT ip;
-
-    ip.type = INPUT_KEYBOARD;
-    ip.ki.wScan = 0;
-    ip.ki.time = 0;
-    ip.ki.dwExtraInfo = 0;
-
-    ip.ki.wVk = key;
-    ip.ki.dwFlags = 0;
-    SendInput(1, &ip, sizeof(INPUT));
-    last_key = key;
-
-    int key_interval = (key == DOWN_KEY) ? 1000 : 100;
-
-    key_release_timer->setInterval(key_interval);
-    key_release_timer->start();
-
-}
-
-
-void MainWindow::ReleaseKey(){
-    INPUT ip;
-
-    ip.type = INPUT_KEYBOARD;
-    ip.ki.wScan = 0;
-    ip.ki.time = 0;
-    ip.ki.dwExtraInfo = 0;
-
-    ip.ki.wVk = last_key;
-    ip.ki.dwFlags = KEYEVENTF_KEYUP;
-    SendInput(1, &ip, sizeof(INPUT));
-
-    key_release_timer->stop();
-
-    std::cout << "key release!\n";
 }
 
 

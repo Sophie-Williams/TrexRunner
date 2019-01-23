@@ -47,8 +47,8 @@ public slots:
     void Tick();
     void GetFPS();
     void Start(QRect rect);
-    void Update(QPoint dino, QPoint blocks[], bool is_night, cv::Mat frame, CollisionResult coll_data, bool on_ground);
-    void ReleaseKey();
+    void Update(QPoint dino, QPoint blocks[], bool is_night, cv::Mat frame, CollisionResult coll_data, bool on_ground, long pix_ms);
+    void Restart();
 
 private:
     Ui::MainWindow *ui;
@@ -60,7 +60,6 @@ private:
     int current_fps;
     bool collided = false;
     void ShowImage(QPixmap pix, QLabel *canvas);
-    void SendKey(WORD key);
     WORD last_key;
     bool on_down_press = false;
     bool on_up_press = false;

@@ -6,11 +6,11 @@
 #include <Windows.h>
 #include <limits.h>
 
-enum ControllerStates{
+/*enum ControllerStates{
     JUMP,
     DUCK,
     NORMAL
-};
+};*/
 
 class GameController: public QObject{
     Q_OBJECT
@@ -19,7 +19,8 @@ public:
     ~GameController();
     void Jump();
     void Duck(int msecs);
-    ControllerStates GetControllerState();
+    void StopKeyPress();
+    //ControllerStates GetControllerState();
 public slots:
     void KeyTimerTick();
 
@@ -30,7 +31,7 @@ private:
     WORD last_key;
     static const WORD UP_KEY = 0x26;
     static const WORD DOWN_KEY = 0x28;
-    ControllerStates controller_state;
+    //ControllerStates controller_state;
     bool infinite_duck_mode = false;
 };
 

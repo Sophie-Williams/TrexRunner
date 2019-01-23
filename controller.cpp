@@ -5,13 +5,13 @@
 GameController::GameController(){
     key_timer = new QTimer();
     connect(key_timer, SIGNAL(timeout()), this, SLOT(KeyTimerTick()));
-    controller_state = ControllerStates::NORMAL;
+    //controller_state = ControllerStates::NORMAL;
     infinite_duck_mode = false;
 }
 
 void GameController::Jump(){
-    SendKey(UP_KEY, 1000);
-    controller_state = ControllerStates::JUMP;
+    SendKey(UP_KEY, 10);
+    //controller_state = ControllerStates::JUMP;
     infinite_duck_mode = false;
 }
 
@@ -28,7 +28,12 @@ void GameController::Duck(int msecs){
     }
 
     SendKey(DOWN_KEY, msecs);
-    controller_state = ControllerStates::DUCK;
+    //controller_state = ControllerStates::DUCK;
+}
+
+void GameController::StopKeyPress(){
+    ReleaseKey();
+    key_timer->stop();
 }
 
 void GameController::SendKey(WORD key, int msecs){

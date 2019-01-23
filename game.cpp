@@ -3,6 +3,31 @@
 DinoGame::DinoGame(){
     dino_temp = imread(QDir::currentPath().toStdString() + "/dino.jpg", cv::IMREAD_GRAYSCALE );
     dino_temp2 = imread(QDir::currentPath().toStdString() + "/dino2.jpg", cv::IMREAD_GRAYSCALE );
+    start_speed = 320;
+    game_speed = start_speed;
+    contour_timer = new QTimer();
+    contour_timer->setInterval(1000);
+    connect(contour_timer, SIGNAL(timeout()), this, SLOT(InspectContours()));
+    //contour_timer->start();
+
+    safe_zone = cv::Rect(-1,-1,-1,-1);
+    dino_pos = cv::Rect(-1,-1,-1,-1);
+    first_dino_pos = cv::Rect(-1,-1,-1,-1);
+    collision_area = cv::Rect(-1,-1,-1,-1);
+
+    game_timer = new QTimer();
+    game_timer->setInterval(1000);
+    connect(game_timer, SIGNAL(timeout()), this, SLOT(GameTimeTick()));
+    //game_timer->start();
+}
+
+DinoGame::~DinoGame(){
+    delete contour_timer;
+    delete game_timer;
+}
+
+void DinoGame::GameTimeTick(){
+    total_growth += growth_factor * total_growth;
 }
 
 void DinoGame::LoadFrame(cv::Mat frame){
@@ -57,13 +82,21 @@ void DinoGame::ProcessFrame(cv::Mat& I, cv::Mat org_frame){
     colors[0] = cv::Scalar(255, 0, 0);
     colors[1] = cv::Scalar(0, 255, 0);
     colors[2] = cv::Scalar(0, 0, 255);
-    for (size_t idx = 0; idx < contours.size(); idx++) {
-        cv::drawContours(contourImage, contours, idx, colors[idx % 3]);
-        cv::Rect bounding_rect = cv::boundingRect(contours[idx]);
-        cv::rectangle( contourImage, bounding_rect.tl(), bounding_rect.br(), colors[idx % 3], 2, 8, 0 );
+
+    current_bounding_rects.clear();
+
+    for (size_t i = 0; i < contours.size(); i++) {
+
+        cv::Rect bounding_rect = cv::boundingRect(contours[i]);
+        if(bounding_rect.height < 20){
+            continue;
+        }
+        //cv::drawContours(contourImage, contours, idx, colors[idx % 3]);
+        current_bounding_rects.push_back(bounding_rect);
+        cv::rectangle( result_frame, bounding_rect.tl(), bounding_rect.br(), cv::Scalar(0,0,255), 1, 8, 0 );
     }
 
-    cv::imshow("contours", contourImage);
+    //cv::imshow("contours", contourImage);
 
 
 
@@ -75,7 +108,7 @@ void DinoGame::ProcessFrame(cv::Mat& I, cv::Mat org_frame){
 
 
     if(dino_found){
-        dino_pos = findDinoTM(I, dino_temp);
+        //dino_pos = findDinoTM(I, dino_temp);
     }else{
         first_dino_pos = findDinoTM(I, dino_temp);
         dino_pos = first_dino_pos;
@@ -89,17 +122,74 @@ void DinoGame::ProcessFrame(cv::Mat& I, cv::Mat org_frame){
               first_dino_pos.br(),
               cv::Scalar(0, 255, 0));
 
-    rectangle(result_frame,
+    /*rectangle(result_frame,
               dino_pos.tl(),
               dino_pos.br(),
-              cv::Scalar(0, 0, 255));
+              cv::Scalar(0, 0, 255));*/
+
+
+
+    if(game_timer->isActive()){
+        int coll_right = first_dino_pos.x + first_dino_pos.width + 4 + collision_area.width + 10;
+        if(coll_right >= I.cols - 30){
+            game_timer->stop();
+        }
+    }
+
+
+    int speed_x_1 = I.cols * 0.95;
+    int speed_x_2 = I.cols * 0.60;
+
+    cv::Rect speed_collider_1(
+                speed_x_1,
+                I.rows / 3,
+                1,
+                I.rows - ((I.rows  - ground_y) + (I.rows / 3)) - 5
+                );
+
+    cv::Rect speed_collider_2(
+                speed_x_2,
+                I.rows / 3,
+                1,
+                I.rows - ((I.rows  - ground_y) + (I.rows / 3)) - 5
+                );
+
+
+
+    if(speed_coll_1 == false){
+        speed_coll_1 = detectCollision(thresh_mat, speed_collider_1);
+        speed_timer.restart();
+    }else{
+        if(speed_coll_1 == true && speed_coll_2 == false){
+            speed_coll_2 = detectCollision(thresh_mat, speed_collider_2);
+        }
+
+        if(speed_coll_1 == true && speed_coll_2 == true){
+            long long t = speed_timer.elapsed();
+            if(t != 0){
+                int s = (speed_x_1 - speed_x_2) * 1000 / t;
+                speed_values.push_back(s);
+                if(speed_values.size() == 5){
+                    int total_s = 0;
+                    for(int i=0; i<speed_values.size(); i++){
+                        total_s += speed_values[i];
+                    }
+                    game_speed = total_s / 5;
+                    speed_values.clear();
+                }
+            }
+
+        }
+    }
+
 
     collision_area = cv::Rect(
                 first_dino_pos.x + first_dino_pos.width + 4,
                 first_dino_pos.y,
-                first_dino_pos.width * 1.2,
+                first_dino_pos.width * 1.3 + (game_speed - start_speed)/4,
                 first_dino_pos.height * 0.7
                 );
+
 
     cv::Rect topCollBox(
                 collision_area.x + (first_dino_pos.height - first_dino_pos.width)*3 + 5,
@@ -108,6 +198,7 @@ void DinoGame::ProcessFrame(cv::Mat& I, cv::Mat org_frame){
                 collision_area.height/2
                 );
 
+
     cv::Rect bottomCollBox(
                 collision_area.x + (first_dino_pos.height - first_dino_pos.width)*3 + 5,
                 collision_area.y + collision_area.height/2 + 5,
@@ -115,40 +206,113 @@ void DinoGame::ProcessFrame(cv::Mat& I, cv::Mat org_frame){
                 collision_area.height/2 - 5
                 );
 
-    cv::Rect dangerZone(
+
+    safe_zone = cv::Rect(
                 first_dino_pos.x,
                 first_dino_pos.y - first_dino_pos.height,
                 bottomCollBox.x + bottomCollBox.width - first_dino_pos.x,
                 bottomCollBox.y + bottomCollBox.height - first_dino_pos.y + first_dino_pos.height
                 );
 
+
+
     /*rectangle(result_frame,
               collision_area,
               cv::Scalar(255, 0, 0));*/
 
 
+
+
     coll_result.top_collision = detectCollision(thresh_mat, topCollBox);
     coll_result.bottom_collision = detectCollision(thresh_mat, bottomCollBox);
     coll_result.dino_collision = detectCollision(thresh_mat, first_dino_pos);
-    coll_result.safe = !detectCollision(thresh_mat, dangerZone, true);
+    coll_result.safe = !detectCollision(thresh_mat, safe_zone, true);
 
     rectangle(result_frame,
               topCollBox,
               cv::Scalar(255, 0, 0));
+
+    cv::Scalar speed_color_1 = (speed_coll_1) ? cv::Scalar(255, 0, 0) : cv::Scalar(0, 0, 0);
+    cv::Scalar speed_color_2 = (speed_coll_2) ? cv::Scalar(255, 0, 0) : cv::Scalar(0, 0, 0);
+
+    rectangle(result_frame,
+              speed_collider_1,
+              speed_color_1);
+
+    rectangle(result_frame,
+              speed_collider_2,
+              speed_color_2);
+
+    if(speed_coll_1 && speed_coll_2){
+        speed_coll_1 = speed_coll_2 = false;
+    }
 
     rectangle(result_frame,
               bottomCollBox,
               cv::Scalar(255, 0, 0));
 
     rectangle(result_frame,
-              dangerZone,
+              safe_zone,
               cv::Scalar(0, 255, 255));
 
-    bool on_ground = (dino_pos.y == first_dino_pos.y ) ? true : false;
+    //bool on_ground = (dino_pos.y == first_dino_pos.y ) ? true : false;
 
-    emit ProcessFinished(QPoint(), new QPoint(), this->is_night, result_frame, coll_result, on_ground);
+
+    emit ProcessFinished(QPoint(), new QPoint(), this->is_night, result_frame, coll_result, on_ground, game_speed);
 }
 
+
+void DinoGame::InspectContours(){
+    if(current_bounding_rects.size() == 0){
+        return;
+    }
+
+    if(current_bounding_rects.size() > 0 && previous_bounding_rects.size() == 0){
+        for(int i=0; i<current_bounding_rects.size(); i++){
+            previous_bounding_rects.push_back(current_bounding_rects[i]);
+        }
+        return;
+    }
+
+    if(current_bounding_rects.size() == previous_bounding_rects.size()){
+        bool no_movement = true;
+        for(int i=0; i<current_bounding_rects.size(); i++){
+            if(current_bounding_rects[i].x != previous_bounding_rects[i].x){
+                no_movement = false;
+                break;
+            }
+        }
+
+        if(no_movement){
+            emit GameOver();
+            return;
+        }
+
+        for(int i=0; i<current_bounding_rects.size(); i++){
+            if(
+                current_bounding_rects[i].x == previous_bounding_rects[i].x &&
+                current_bounding_rects[i].width == previous_bounding_rects[i].width &&
+                current_bounding_rects[i].height == previous_bounding_rects[i].height
+            ){
+                if(current_bounding_rects[i].y == previous_bounding_rects[i].y){
+                    on_ground = true;
+                }else if(current_bounding_rects[i].y != previous_bounding_rects[i].y){
+                    on_ground = false;
+                }
+                break;
+            }
+        }
+
+    }
+
+
+    previous_bounding_rects.clear();
+    for(int i=0; i<current_bounding_rects.size(); i++){
+        previous_bounding_rects.push_back(current_bounding_rects[i]);
+    }
+
+
+}
 
 
 int DinoGame::findGround(cv::Mat &I){
